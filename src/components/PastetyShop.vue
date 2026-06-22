@@ -4,34 +4,49 @@
       <h2>🛒 Магазин паштетов</h2>
       <span class="balance">💰 {{ Math.floor(catStore.murki) }}</span>
     </div>
-    <div v-for="(type, key) in pastetyTypes" :key="key" class="shop-item">
-      <div class="shop-info">
-        <span class="shop-emoji">{{ type.emoji }}</span>
-        <div>
-          <div class="shop-name">{{ type.name }}</div>
-          <div class="shop-stats">
-            +{{ type.hunger }} 🍖 | +{{ type.happy }} 😸
+    <template v-for="(items, cat) in grouped" :key="cat">
+      <div class="category-header">{{ cat }}</div>
+      <div v-for="(type, key) in items" :key="key" class="shop-item">
+        <div class="shop-info">
+          <span class="shop-emoji">{{ type.emoji }}</span>
+          <div>
+            <div class="shop-name">{{ type.name }}</div>
+            <div class="shop-stats">
+              +{{ type.hunger }} 🍖 | +{{ type.happy }} 😸
+            </div>
           </div>
         </div>
+        <button
+          class="btn btn-green"
+          @click="buy(key)"
+          :disabled="catStore.murki < type.price"
+        >
+          💰 {{ type.price }}
+        </button>
       </div>
-      <button
-        class="btn btn-green"
-        @click="buy(key)"
-        :disabled="catStore.murki < type.price"
-      >
-        💰 {{ type.price }}
-      </button>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useCatStore } from '@/stores/catStore'
 import { useGameLogStore } from '@/stores/gameLogStore'
-import { pastetyTypes } from '@/data/pastetyTypes'
+import { pastetyTypes, categoryLabels } from '@/data/pastetyTypes'
+import type { PastetyCategory } from '@/types'
 
 const catStore = useCatStore()
 const logStore = useGameLogStore()
+
+const grouped = computed(() => {
+  const groups: Record<string, Record<string, typeof pastetyTypes[string]>> = {}
+  for (const [key, type] of Object.entries(pastetyTypes)) {
+    const label = categoryLabels[type.category] || type.category
+    if (!groups[label]) groups[label] = {}
+    groups[label][key] = type
+  }
+  return groups
+})
 
 const royalReactions = [
   'ОО неужели расщедрился барин 👀',
@@ -114,6 +129,18 @@ h2 {
 .shop-stats {
   font-size: 0.85em;
   opacity: 0.8;
+}
+
+.category-header {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 12px 0 6px;
+  padding: 4px 0 4px 6px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.category-header:first-child {
+  margin-top: 0;
 }
 
 .btn {

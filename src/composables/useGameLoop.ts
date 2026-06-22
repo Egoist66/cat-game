@@ -2,18 +2,16 @@ import { onMounted, onUnmounted } from 'vue'
 import { useCatStore } from '@/stores/catStore'
 import { useGameLogStore } from '@/stores/gameLogStore'
 import { useDietStore } from '@/stores/dietStore'
-import { useSaveStore } from '@/stores/saveStore'
 import { pastetyTypes } from '@/data/pastetyTypes'
 
 export function useGameLoop() {
   const catStore = useCatStore()
   const logStore = useGameLogStore()
   const dietStore = useDietStore()
-  const saveStore = useSaveStore()
 
   let tickInterval: ReturnType<typeof setInterval> | null = null
   let eatInterval: ReturnType<typeof setInterval> | null = null
-  let saveInterval: ReturnType<typeof setInterval> | null = null
+  let eventInterval: ReturnType<typeof setInterval> | null = null
 
   function handleTitleClick() {
     catStore.spawnFloatingEmoji('🐱')
@@ -48,12 +46,7 @@ export function useGameLoop() {
   }
 
   onMounted(() => {
-    const loaded = saveStore.load()
-    if (loaded) {
-      logStore.add('💾 Игра загружена!')
-    } else {
-      logStore.add(`🐱 ${catStore.cat.name} проснулся и ждёт паштетов!`)
-    }
+    logStore.add(`🐱 ${catStore.cat.name} проснулся и ждёт паштетов!`)
 
     tickInterval = setInterval(() => {
       catStore.tick()
@@ -81,15 +74,18 @@ export function useGameLoop() {
       checkDietAutoFeed()
     }, 2000)
 
-    saveInterval = setInterval(() => {
-      saveStore.save()
-    }, 30000)
+    eventInterval = setInterval(() => {
+      const msg = catStore.triggerRandomEvent()
+      if (msg) {
+        logStore.add(msg)
+      }
+    }, 25000)
   })
 
   onUnmounted(() => {
     if (tickInterval) clearInterval(tickInterval)
     if (eatInterval) clearInterval(eatInterval)
-    if (saveInterval) clearInterval(saveInterval)
+    if (eventInterval) clearInterval(eventInterval)
   })
 
   return {

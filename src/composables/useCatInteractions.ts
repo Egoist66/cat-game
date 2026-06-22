@@ -15,12 +15,27 @@ export function useCatInteractions() {
 
   function handlePet() {
     const msg = catStore.petCat()
+    catStore.triggerActionFlash('Погладили котика! 💖', '🤚')
     logStore.add(msg)
   }
 
-  function handleFeed() {
+  async function handleFeed() {
     const started = catStore.pozvatSkotinku()
-    if (started) {
+
+    if (started === 'overfeed') {
+      const ok = await modalStore.confirm({
+        title: 'Котик уже сыт! 🍖',
+        message: `${catStore.cat.name} наелся до отвала! Если продолжишь кормить — переест, накакает ♲ и настроение упадёт!`,
+        confirmText: 'Всё равно накормить 💩',
+        cancelText: 'Хватит, спасибо',
+        icon: '😿',
+        danger: true,
+      })
+      if (!ok) return
+      const msg = catStore.overeat()
+      logStore.add(msg)
+    } else if (started === 'ok') {
+      catStore.triggerActionFlash('Котик кушает! 🍽️', '😼')
       logStore.add(`${catStore.cat.name}, идити кушать, скриииипт! :))`)
     }
   }
@@ -37,6 +52,7 @@ export function useCatInteractions() {
     catStore.applyEffects(8, -2, 2)
     catStore.spawnFloatingEmoji('🎾')
     catStore.setTemporaryEmoji('😸', 800)
+    catStore.triggerActionFlash(`${catStore.cat.name} играет! 🎾`, '🎾')
     logStore.add(`🎾 Поиграли с ${catStore.cat.name}! +8 счастья, +2 мурчалки`)
     setTimeout(() => {
       if (catStore.action === 'playing') {
@@ -51,6 +67,7 @@ export function useCatInteractions() {
       catStore.setAction('idle')
       catStore.setTemporaryEmoji('😺', 2000)
       catStore.spawnFloatingEmoji('🌅')
+      catStore.triggerActionFlash(`${catStore.cat.name} проснулся! 🌅`, '🌅')
       logStore.add(`🌅 ${catStore.cat.name} проснулся!`)
       catStore.applyEffects(5, -3, 1)
     } else {
@@ -58,6 +75,7 @@ export function useCatInteractions() {
       catStore.setAction('sleeping')
       catStore.setTemporaryEmoji('😽', 1500)
       catStore.spawnFloatingEmoji('💤')
+      catStore.triggerActionFlash(`${catStore.cat.name} уснул... 💤`, '😽')
       logStore.add(`😽 ${catStore.cat.name} уснул... тихо, не шумите!`)
     }
   }
@@ -87,7 +105,7 @@ export function useCatInteractions() {
   }
 
   function handleSave() {
-    saveStore.save()
+    saveStore.showStatus('saved')
   }
 
   return {

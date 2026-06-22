@@ -1,9 +1,12 @@
+export type PastetyCategory = 'basic' | 'whiskas' | 'royal'
+
 export interface PastetyType {
   name: string
   emoji: string
   price: number
   hunger: number
   happy: number
+  category: PastetyCategory
 }
 
 export interface PastetyInventory {

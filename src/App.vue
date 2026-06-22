@@ -7,17 +7,22 @@
         </h1>
         <p class="subtitle">Накорми котика и сделай его счастливым! 🍖😸</p>
       </div>
-      <button class="guide-btn" @click="modalStore.openGuide" title="Гайд по игре">
-        <span class="guide-icon">❓</span>
-        <span class="guide-label">Гайд</span>
-      </button>
+      <div class="header-buttons">
+        <button class="guide-btn" @click="logVisible = true" title="Дневник котика">
+          <span class="guide-icon">📜</span>
+          <span class="guide-label">Дневник</span>
+        </button>
+        <button class="guide-btn" @click="modalStore.openGuide" title="Гайд по игре">
+          <span class="guide-icon">❓</span>
+          <span class="guide-label">Гайд</span>
+        </button>
+      </div>
     </div>
 
     <CatZone />
 
-    <div class="grid">
-      <PhraseInteraction />
-      <DietPlanner />
+    <div class="section-divider">
+      <span class="divider-icon">🥫</span>
     </div>
 
     <div class="grid">
@@ -25,11 +30,24 @@
       <PastetyShop />
     </div>
 
+    <div class="section-divider">
+      <span class="divider-icon">💬</span>
+    </div>
+
+    <div class="grid">
+      <PhraseInteraction />
+      <DietPlanner />
+    </div>
+
+    <div class="section-divider">
+      <span class="divider-icon">🤖</span>
+    </div>
+
     <div class="grid">
       <AutoFeeder />
     </div>
 
-    <GameLog />
+    <GameLogModal :visible="logVisible" @close="logVisible = false" />
 
     <GuideModal />
     <ConfirmDialog />
@@ -37,20 +55,38 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import { useModalStore } from '@/stores/modalStore'
+import { useCatStore } from '@/stores/catStore'
 import CatZone from '@/components/CatZone.vue'
 import PhraseInteraction from '@/components/PhraseInteraction.vue'
 import DietPlanner from '@/components/DietPlanner.vue'
 import PastetyInventory from '@/components/PastetyInventory.vue'
 import PastetyShop from '@/components/PastetyShop.vue'
 import AutoFeeder from '@/components/AutoFeeder.vue'
-import GameLog from '@/components/GameLog.vue'
+import GameLogModal from '@/components/GameLogModal.vue'
 import GuideModal from '@/components/GuideModal.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import { useGameLoop } from '@/composables/useGameLoop'
 
 const modalStore = useModalStore()
+const catStore = useCatStore()
+const logVisible = ref(false)
 const { handleTitleClick } = useGameLoop()
+
+const bgStyle = computed(() => {
+  if (catStore.mood === 'sad') {
+    return { background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #4a69bd 100%)' }
+  }
+  if (catStore.mood === 'ok') {
+    return { background: 'linear-gradient(135deg, #636e72 0%, #667eea 50%, #a29bfe 100%)' }
+  }
+  return { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)' }
+})
+
+watch(bgStyle, (val) => {
+  document.body.style.background = val.background
+}, { immediate: true })
 </script>
 
 <style>
@@ -62,16 +98,18 @@ const { handleTitleClick } = useGameLoop()
 
 body {
   font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
   min-height: 100vh;
   color: #fff;
   overflow-x: hidden;
+  margin: 0;
+  transition: background 1.2s ease;
 }
 
 .app-container {
-  max-width: 1100px;
+  max-width: 1140px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px 28px 48px;
+  min-height: 100vh;
 }
 
 .header-row {
@@ -106,6 +144,13 @@ body {
   font-size: 1em;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
 .guide-btn {
   display: flex;
   align-items: center;
@@ -122,7 +167,6 @@ body {
   transition: all 0.2s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
-  margin-top: 4px;
   min-height: 44px;
 }
 
@@ -145,11 +189,41 @@ body {
   50% { transform: translateY(-10px); }
 }
 
+.section-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 24px 0 20px;
+  position: relative;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.section-divider::before {
+  margin-right: 16px;
+}
+
+.section-divider::after {
+  margin-left: 16px;
+}
+
+.divider-icon {
+  font-size: 1.4em;
+  opacity: 0.7;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 24px;
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
@@ -160,8 +234,8 @@ body {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 24px;
+  padding: 24px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -231,6 +305,10 @@ select option {
     font-size: 0.85em;
   }
 
+  .header-buttons {
+    gap: 6px;
+  }
+
   .guide-btn {
     padding: 8px 12px;
     font-size: 0.85em;
@@ -245,14 +323,17 @@ select option {
     font-size: 0.8em;
   }
 
+  .section-divider {
+    margin: 18px 0 14px;
+  }
+
   .grid {
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
   }
 
   .card {
-    padding: 14px;
-    border-radius: 16px;
+    padding: 16px;
+    border-radius: 18px;
   }
 
   h2 {

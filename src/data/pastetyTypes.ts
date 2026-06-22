@@ -1,13 +1,19 @@
 import type { PastetyType } from '@/types'
 
 export const pastetyTypes: Record<string, PastetyType> = {
-  mortadella: { name: 'Мортаделла',       emoji: '🍖', price: 0,   hunger: 2,  happy: -2 },
-  sausage:    { name: 'Сосисочная',       emoji: '🌭', price: 1,   hunger: 5,  happy: 0 },
-  chicken:    { name: 'Вискас (Курица)',  emoji: '🍗', price: 8,   hunger: 10, happy: 3 },
-  duck:       { name: 'Вискас (Утка)',    emoji: '🦆', price: 20,  hunger: 20, happy: 6 },
-  salmon:     { name: 'Вискас (Лосось)',  emoji: '🐟', price: 40,  hunger: 28, happy: 12 },
-  beef:       { name: 'Вискас (Говядина)', emoji: '🥩', price: 80,  hunger: 38, happy: 22 },
-  royal:      { name: 'Роял Канин',       emoji: '👑', price: 200, hunger: 60, happy: 50 },
+  mortadella: { name: 'Мортаделла',       emoji: '🍖', price: 0,   hunger: 2,  happy: -2, category: 'basic' },
+  sausage:    { name: 'Куски сосисок',    emoji: '🌭', price: 1,   hunger: 5,  happy: 0,  category: 'basic' },
+  chicken:    { name: 'Вискас (Курица)',  emoji: '🍗', price: 8,   hunger: 10, happy: 3,  category: 'whiskas' },
+  duck:       { name: 'Вискас (Утка)',    emoji: '🦆', price: 20,  hunger: 20, happy: 6,  category: 'whiskas' },
+  salmon:     { name: 'Вискас (Лосось)',  emoji: '🐟', price: 40,  hunger: 28, happy: 12, category: 'whiskas' },
+  beef:       { name: 'Вискас (Говядина)', emoji: '🥩', price: 80,  hunger: 38, happy: 22, category: 'whiskas' },
+  royal:      { name: 'Роял Канин',       emoji: '👑', price: 200, hunger: 60, happy: 50, category: 'royal' },
+}
+
+export const categoryLabels: Record<string, string> = {
+  basic: '🥫 Базовые',
+  whiskas: '🐱 Вискас',
+  royal: '👑 Роял Канин',
 }
 
 export const defaultPhraseReactions = [

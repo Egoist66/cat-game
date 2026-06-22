@@ -11,22 +11,26 @@ export const useCatStore = defineStore('cat', () => {
     happy: 50,
   })
 
+  const thirst = ref(60)
+  const weight = ref(50)
   const murki = ref(20)
   const isEating = ref(false)
   const action = ref<CatAction>('idle')
   const floatingEmojis = ref<{ id: number; emoji: string; x: number; y: number }[]>([])
   const temporaryEmoji = ref<string | null>(null)
+  const actionFlash = ref<{ text: string; emoji: string } | null>(null)
   let nextEmojiId = 0
   let tempEmojiTimer: ReturnType<typeof setTimeout> | null = null
+  let flashTimer: ReturnType<typeof setTimeout> | null = null
 
   const totalPastety = computed(() =>
     Object.values(cat.value.pashtety).reduce((a, b) => a + b, 0)
   )
 
   const mood = computed<Mood>(() => {
-    if (cat.value.happy >= 80 && cat.value.hunger >= 60) return 'ecstatic'
-    if (cat.value.happy >= 50 && cat.value.hunger >= 40) return 'happy'
-    if (cat.value.happy < 20 || cat.value.hunger < 20) return 'sad'
+    if (cat.value.happy >= 80 && cat.value.hunger >= 60 && thirst.value >= 50) return 'ecstatic'
+    if (cat.value.happy >= 50 && cat.value.hunger >= 40 && thirst.value >= 30) return 'happy'
+    if (cat.value.happy < 20 || cat.value.hunger < 20 || thirst.value < 15) return 'sad'
     return 'ok'
   })
 
@@ -39,6 +43,7 @@ export const useCatStore = defineStore('cat', () => {
       if (mood.value === 'happy') return '😸'
       return '😺'
     }
+    if (thirst.value < 15) return '😿'
     if (cat.value.hunger < 20 && cat.value.happy >= 50) return '😿'
     if (cat.value.hunger < 20) return '😿'
     return { ecstatic: '😻', happy: '😸', ok: '🐱', sad: '😿' }[mood.value]
@@ -54,9 +59,23 @@ export const useCatStore = defineStore('cat', () => {
 
   const moodText = computed(() => {
     const name = cat.value.name
+    const h = cat.value.hunger
+    const ha = cat.value.happy
+    const t = thirst.value
+
     if (action.value === 'eating') return `${name} кушает! Ням-ням-ням! Вкуснятина! 😼`
     if (action.value === 'sleeping') return `Тсс... ${name} спит... 😽💤`
     if (action.value === 'playing') return `${name} играет и веселится! 🎾`
+
+    if (h < 15 && t < 15) return `😿 ${name} в критическом состоянии! Срочно нужна еда и вода!`
+    if (h < 15) return `😿 ${name} ужасно голоден... дай паштет!`
+    if (t < 15) return `${name} хочет пить... налей водички! 😿`
+    if (ha < 15) return `${name} очень грустный... погладь его! 💔`
+
+    if (h < 30 && t < 30) return `${name} не отказался бы от еды и воды 😓`
+    if (h < 30) return `${name} хочет кушать 🍖`
+    if (t < 30) return `${name} не прочь попить 😿`
+
     return {
       ecstatic: `Муррр... ${name} — самый счастливый котик! 💖`,
       happy: `Мур-мур, ${name} доволен жизнью~ 😺`,
@@ -81,14 +100,33 @@ export const useCatStore = defineStore('cat', () => {
   }
 
   function pozvatSkotinku() {
-    if (isEating.value || totalPastety.value === 0) return false
+    if (isEating.value || totalPastety.value === 0) return 'deny'
+    if (cat.value.hunger >= 90) return 'overfeed'
     action.value = 'eating'
     isEating.value = true
     setTemporaryEmoji('😻', 1200)
-    return true
+    return 'ok'
+  }
+
+  function overeat() {
+    cat.value.happy = Math.max(0, cat.value.happy - 20)
+    cat.value.hunger = Math.max(0, cat.value.hunger - 10)
+    spawnFloatingEmoji('💩')
+    spawnFloatingEmoji('💩')
+    spawnFloatingEmoji('💩')
+    setTemporaryEmoji('😿', 3000)
+    triggerActionFlash('💩 Котик переел! Всё в какашках!', '💩')
+    return '💩💩💩 Котик переел и накакал! Счастье -20'
   }
 
   function eatStep(): { ate: boolean; key?: string } {
+    if (cat.value.hunger >= 85) {
+      isEating.value = false
+      action.value = 'idle'
+      const msg = `🍖 ${cat.value.name} уже наелся! Не пихай в него больше паштетов!`
+      triggerActionFlash(msg, '😾')
+      return { ate: false }
+    }
     const order = ['royal', 'beef', 'salmon', 'duck', 'chicken', 'sausage', 'mortadella']
     let eaten: string | null = null
     for (const key of order) {
@@ -131,9 +169,58 @@ export const useCatStore = defineStore('cat', () => {
   }
 
   function tick() {
-    cat.value.hunger = Math.max(0, cat.value.hunger - 0.5)
-    cat.value.happy = Math.max(0, cat.value.happy - 0.3)
+    const hungerDecay = action.value === 'playing' ? 0.8 : action.value === 'sleeping' ? 0.2 : 0.5
+    const happyDecay = cat.value.hunger < 20 ? 0.6 : 0.3
+    const thirstDecay = cat.value.hunger < 20 ? 0.4 : 0.2
+
+    cat.value.hunger = Math.max(0, cat.value.hunger - hungerDecay)
+    cat.value.happy = Math.max(0, cat.value.happy - happyDecay)
+    thirst.value = Math.max(0, thirst.value - thirstDecay)
+
+    if (cat.value.hunger > 70) {
+      weight.value = Math.min(100, weight.value + 0.02)
+    } else if (cat.value.hunger < 30) {
+      weight.value = Math.max(0, weight.value - 0.03)
+    }
+
     murki.value += murkiPerSec.value
+  }
+
+  function drinkWater() {
+    thirst.value = Math.min(100, thirst.value + 30)
+    spawnFloatingEmoji('💧')
+    setTemporaryEmoji('😻', 1500)
+    triggerActionFlash('Котик напился!', '💧')
+    return '💧 Котик попил водички!'
+  }
+
+  function triggerActionFlash(text: string, emoji: string) {
+    actionFlash.value = { text, emoji }
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => {
+      actionFlash.value = null
+    }, 1500)
+  }
+
+  const randomEvents = [
+    { text: 'принёс бантик!', emoji: '🎀', happyDelta: 3 },
+    { text: 'гоняется за своим хвостом!', emoji: '🌀', happyDelta: 2 },
+    { text: 'зевнул и потянулся!', emoji: '😽', happyDelta: 1 },
+    { text: 'трётся о ноги!', emoji: '💖', happyDelta: 4 },
+    { text: 'сбросил что-то со стола!', emoji: '💥', happyDelta: -2 },
+    { text: 'мурлычет как трактор!', emoji: '🎶', happyDelta: 3 },
+    { text: 'ловит солнечных зайчиков!', emoji: '☀️', happyDelta: 5 },
+    { text: 'умывается лапкой!', emoji: '🧼', happyDelta: 1 },
+  ]
+
+  function triggerRandomEvent(): string | null {
+    if (action.value !== 'idle') return null
+    if (Math.random() > 0.4) return null
+    const event = randomEvents[Math.floor(Math.random() * randomEvents.length)]
+    cat.value.happy = Math.max(0, Math.min(100, cat.value.happy + event.happyDelta))
+    const msg = `${event.emoji} ${cat.value.name} ${event.text}`
+    triggerActionFlash(msg, event.emoji)
+    return msg
   }
 
   function spawnFloatingEmoji(emoji: string) {
@@ -155,6 +242,8 @@ export const useCatStore = defineStore('cat', () => {
       hunger: 50,
       happy: 50,
     }
+    thirst.value = 60
+    weight.value = 50
     murki.value = 20
     isEating.value = false
     action.value = 'idle'
@@ -168,10 +257,12 @@ export const useCatStore = defineStore('cat', () => {
   }
 
   return {
-    cat, murki, isEating, action, floatingEmojis, temporaryEmoji,
+    cat, thirst, weight, murki, isEating, action,
+    floatingEmojis, temporaryEmoji, actionFlash,
     totalPastety, mood, catEmoji, moodText, murkiPerSec,
-    addLog, pozvatSkotinku, eatStep, stopEating,
+    addLog, pozvatSkotinku, overeat, eatStep, stopEating,
     buyPasta, petCat, tick, spawnFloatingEmoji, setAction,
+    drinkWater, triggerActionFlash, triggerRandomEvent,
     resetGame, applyEffects, setTemporaryEmoji,
   }
 })

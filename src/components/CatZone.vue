@@ -33,14 +33,26 @@
     <div class="bars">
       <div class="bar-wrap">
         <div class="bar-fill bar-hunger" :style="{ width: catStore.cat.hunger + '%' }">
-          🍖 Сытость: {{ Math.round(catStore.cat.hunger) }}%
+          <span class="bar-label">Сытость: {{ Math.round(catStore.cat.hunger) }}%</span>
+          <span class="bar-icon">🍖</span>
         </div>
       </div>
       <div class="bar-wrap">
         <div class="bar-fill bar-happy" :style="{ width: catStore.cat.happy + '%' }">
-          😸 Счастье: {{ Math.round(catStore.cat.happy) }}%
+          <span class="bar-label">Счастье: {{ Math.round(catStore.cat.happy) }}%</span>
+          <span class="bar-icon">😸</span>
         </div>
       </div>
+      <div class="bar-wrap">
+        <div class="bar-fill bar-thirst" :style="{ width: catStore.thirst + '%' }">
+          <span class="bar-label">Жажда: {{ Math.round(catStore.thirst) }}%</span>
+          <span class="bar-icon">💧</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="weight-indicator">
+      <span :class="weightClass">{{ statusIcon }} {{ catStore.cat.name }} — {{ statusLabel }}</span>
     </div>
 
     <div class="action-indicator" v-if="catStore.action !== 'idle'">
@@ -60,6 +72,7 @@
         🍽️ Позвать {{ catStore.cat.name }} кушать!
       </button>
       <button class="btn btn-blue" @click="handlePet">🤚 Погладить</button>
+      <button class="btn btn-cyan" @click="handleWater">💧 Водички</button>
       <button class="btn btn-green" @click="handlePlay" :disabled="catStore.isEating || catStore.action === 'sleeping'">
         🎾 Играть
       </button>
@@ -89,20 +102,83 @@
         {{ emoji.emoji }}
       </div>
     </div>
+
+    <teleport to="body">
+      <div v-if="catStore.actionFlash" class="action-flash-overlay">
+        <div class="action-flash-content">
+          <span class="action-flash-emoji">{{ catStore.actionFlash.emoji }}</span>
+          <span class="action-flash-text">{{ catStore.actionFlash.text }}</span>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useCatStore } from '@/stores/catStore'
 import { useCatInteractions } from '@/composables/useCatInteractions'
+import { useGameLogStore } from '@/stores/gameLogStore'
 
 const catStore = useCatStore()
+const logStore = useGameLogStore()
 const {
   showTooltip, isTyping,
   handlePet, handleFeed, handlePlay, toggleSleep,
   onHover, onLeave, handleReset, handleSave,
   saveStatus,
 } = useCatInteractions()
+
+const statusLabel = computed(() => {
+  const h = catStore.cat.hunger
+  const ha = catStore.cat.happy
+  const t = catStore.thirst
+  const w = catStore.weight
+
+  if (h < 15 && t < 15) return 'критическое состояние! 🆘'
+  if (h < 15) return 'умирает с голоду! 🍖😿'
+  if (t < 15) return 'хочет пить! 😿'
+  if (ha < 15) return 'глубоко несчастен... 💔'
+  if (h < 30 && t < 30) return 'голоден и хочет пить 😓'
+  if (h < 30) return 'хочет кушать 🍖'
+  if (t < 30) return 'хотел бы водички 😿'
+  if (ha >= 80 && h >= 70 && t >= 70) return 'абсолютно счастлив! 💖✨'
+  if (ha >= 60 && h >= 50) return 'доволен жизнью 😊'
+
+  if (w >= 80) return 'толстенький 🐷'
+  if (w >= 60) return 'упитанный 🐱'
+  if (w >= 40) return 'стройный 🐈'
+  if (w >= 20) return 'худенький 🐈‍⬛'
+  return 'дистрофик 😿'
+})
+
+const statusIcon = computed(() => {
+  const h = catStore.cat.hunger
+  const ha = catStore.cat.happy
+  const t = catStore.thirst
+  const w = catStore.weight
+
+  if (h < 15 && t < 15) return '🆘'
+  if (h < 15) return '🍖'
+  if (t < 15) return '😿'
+  if (ha < 15) return '💔'
+  if (ha >= 80 && h >= 70 && t >= 70) return '💖'
+  if (w >= 80) return '🐷'
+  if (w >= 60) return '🐱'
+  if (w >= 40) return '🐈'
+  return '🐈‍⬛'
+})
+
+const weightClass = computed(() => {
+  if (catStore.weight >= 80) return 'weight-fat'
+  if (catStore.weight <= 20) return 'weight-thin'
+  return ''
+})
+
+function handleWater() {
+  const msg = catStore.drinkWater()
+  logStore.add(msg)
+}
 </script>
 
 <style scoped>
@@ -111,6 +187,8 @@ const {
   grid-column: 1 / -1;
   position: relative;
   overflow: hidden;
+  padding: 28px 24px;
+  margin-bottom: 6px;
 }
 
 .cat-emoji {
@@ -300,14 +378,14 @@ const {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-width: 400px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
 .bar-wrap {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
-  height: 25px;
+  border-radius: 12px;
+  height: 40px;
   overflow: hidden;
   position: relative;
 }
@@ -317,13 +395,46 @@ const {
   transition: width 0.5s ease;
   display: flex;
   align-items: center;
-  padding-left: 10px;
+  padding: 0 14px;
   font-weight: bold;
-  font-size: 0.9em;
+  font-size: 0.95em;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  min-width: 0;
+}
+
+.bar-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-icon {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 1.3em;
+  line-height: 1;
 }
 
 .bar-hunger { background: linear-gradient(90deg, #ff6b6b, #feca57); }
 .bar-happy { background: linear-gradient(90deg, #48dbfb, #0abde3); }
+.bar-thirst { background: linear-gradient(90deg, #74b9ff, #0984e3); }
+
+.weight-indicator {
+  text-align: center;
+  font-size: 1em;
+  margin: 6px 0;
+  opacity: 0.85;
+}
+
+.weight-indicator .weight-fat {
+  color: #feca57;
+}
+
+.weight-indicator .weight-thin {
+  color: #ff6b6b;
+}
 
 .action-indicator {
   margin: 8px 0;
@@ -382,6 +493,7 @@ const {
 
 .btn-blue { background: linear-gradient(135deg, #2193b0, #6dd5ed); }
 .btn-green { background: linear-gradient(135deg, #56ab2f, #a8e063); }
+.btn-cyan { background: linear-gradient(135deg, #0984e3, #74b9ff); }
 .btn-gold { background: linear-gradient(135deg, #f7971e, #ffd200); color: #333; }
 .btn-purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
 .btn-save {
@@ -446,6 +558,62 @@ const {
   100% { opacity: 0; transform: translateY(-200px) scale(0.3); }
 }
 
+.action-flash-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 80px 20px 0 0;
+  animation: flashSlide 0.4s ease-out;
+}
+
+.action-flash-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  padding: 14px 24px 14px 18px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  animation: flashPop 0.5s ease-out;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.action-flash-emoji {
+  font-size: 2.8em;
+  animation: flashBounce 0.6s ease-out;
+  line-height: 1;
+}
+
+.action-flash-text {
+  font-size: 1.05em;
+  font-weight: bold;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
+@keyframes flashSlide {
+  from { transform: translateX(120px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes flashPop {
+  from { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.05); }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes flashBounce {
+  0% { transform: scale(0) rotate(-15deg); }
+  60% { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
 @media (max-width: 480px) {
   .cat-emoji {
     font-size: 5em;
@@ -481,6 +649,19 @@ const {
 
   .bars {
     max-width: 100%;
+  }
+
+  .bar-wrap {
+    height: 40px;
+  }
+
+  .bar-fill {
+    font-size: 0.85em;
+    padding: 0 10px;
+  }
+
+  .bar-icon {
+    font-size: 1.15em;
   }
 
   .tooltip {
