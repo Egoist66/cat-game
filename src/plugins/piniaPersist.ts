@@ -13,6 +13,7 @@ const OLD_KEY_MAP: Record<string, string> = {
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null
 const hydrated = new Set<string>()
+let piniaInstance: any = null
 
 function pashtety(value: unknown): Record<string, number> {
   if (!value || typeof value !== 'object') return {}
@@ -35,14 +36,16 @@ function load(id: string, saved: any) {
 
 export function persistSave() {
   try {
+    const state = piniaInstance?.state?.value
+    if (!state) return
     const raw = localStorage.getItem(SAVE_KEY)
     const data = raw ? JSON.parse(raw) : {}
     for (const id of PERSISTED_STORES) {
-      const state = (window as any).__pinia?.state?.value?.[id]
-      if (state) {
+      const s = state[id]
+      if (s) {
         const clone: any = {}
-        for (const k of Object.keys(state)) {
-          const v = state[k]
+        for (const k of Object.keys(s)) {
+          const v = s[k]
           clone[k] = v instanceof Set ? [...v] : v
         }
         data[id] = clone
@@ -59,7 +62,8 @@ function save() {
   }, 300)
 }
 
-export function piniaPersist({ store }: PiniaPluginContext) {
+export function piniaPersist({ store, pinia }: PiniaPluginContext) {
+  piniaInstance = pinia
   const id = store.$id
   if (!PERSISTED_STORES.includes(id)) return
 
