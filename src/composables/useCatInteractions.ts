@@ -3,6 +3,7 @@ import { useCatStore } from '@/stores/catStore'
 import { useGameLogStore } from '@/stores/gameLogStore'
 import { useModalStore } from '@/stores/modalStore'
 import { useSaveStore } from '@/stores/saveStore'
+import { persistSave } from '@/plugins/piniaPersist'
 
 export function useCatInteractions() {
   const catStore = useCatStore()
@@ -106,6 +107,9 @@ export function useCatInteractions() {
 
   function handleSave() {
     saveStore.showStatus('saved')
+    persistSave()
+    saveStore.setLastSaved()
+    saveStore.showToast('💾 Игра сохранена!', 'success')
   }
 
   return {

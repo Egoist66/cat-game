@@ -33,25 +33,29 @@ function load(id: string, saved: any) {
   return saved
 }
 
+export function persistSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY)
+    const data = raw ? JSON.parse(raw) : {}
+    for (const id of PERSISTED_STORES) {
+      const state = (window as any).__pinia?.state?.value?.[id]
+      if (state) {
+        const clone: any = {}
+        for (const k of Object.keys(state)) {
+          const v = state[k]
+          clone[k] = v instanceof Set ? [...v] : v
+        }
+        data[id] = clone
+      }
+    }
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data))
+  } catch {}
+}
+
 function save() {
   if (saveTimeout) clearTimeout(saveTimeout)
   saveTimeout = setTimeout(() => {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY)
-      const data = raw ? JSON.parse(raw) : {}
-      for (const id of PERSISTED_STORES) {
-        const state = (window as any).__pinia?.state?.value?.[id]
-        if (state) {
-          const clone: any = {}
-          for (const k of Object.keys(state)) {
-            const v = state[k]
-            clone[k] = v instanceof Set ? [...v] : v
-          }
-          data[id] = clone
-        }
-      }
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data))
-    } catch {}
+    persistSave()
   }, 300)
 }
 

@@ -88,9 +88,15 @@
     </div>
     <div class="save-indicator" v-if="saveStatus !== 'idle'">
       <span :class="['save-badge', saveStatus]">
-        {{ saveStatus === 'saved' ? '💾 Сохранено!' : '📂 Загружено!' }}
+        {{ saveStatus === 'saving' ? '💾 Сохранение...' : saveStatus === 'saved' ? '💾 Сохранено!' : '📂 Загружено!' }}
       </span>
     </div>
+
+    <Transition name="toast">
+      <div v-if="saveStore.toast.visible" :class="['toast-notification', `toast-${saveStore.toast.type}`]">
+        {{ saveStore.toast.message }}
+      </div>
+    </Transition>
 
     <div class="floating-container">
       <div
@@ -119,9 +125,11 @@ import { computed } from 'vue'
 import { useCatStore } from '@/stores/catStore'
 import { useCatInteractions } from '@/composables/useCatInteractions'
 import { useGameLogStore } from '@/stores/gameLogStore'
+import { useSaveStore } from '@/stores/saveStore'
 
 const catStore = useCatStore()
 const logStore = useGameLogStore()
+const saveStore = useSaveStore()
 const {
   showTooltip, isTyping,
   handlePet, handleFeed, handlePlay, toggleSleep,
@@ -556,6 +564,58 @@ function handleWater() {
 @keyframes floatUp {
   0% { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 0; transform: translateY(-200px) scale(0.3); }
+}
+
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  padding: 14px 28px;
+  border-radius: 16px;
+  font-size: 1.1em;
+  font-weight: bold;
+  text-align: center;
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.toast-success {
+  background: rgba(86, 171, 47, 0.9);
+  color: white;
+  border: 2px solid #a8e063;
+}
+
+.toast-error {
+  background: rgba(255, 70, 70, 0.9);
+  color: white;
+  border: 2px solid #ff6b6b;
+}
+
+.toast-info {
+  background: rgba(33, 147, 176, 0.9);
+  color: white;
+  border: 2px solid #6dd5ed;
+}
+
+.toast-enter-active {
+  animation: toastIn 0.35s ease-out;
+}
+
+.toast-leave-active {
+  animation: toastOut 0.3s ease-in;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.9); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes toastOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  to { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.9); }
 }
 
 .action-flash-overlay {

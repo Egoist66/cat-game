@@ -55,9 +55,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useModalStore } from '@/stores/modalStore'
 import { useCatStore } from '@/stores/catStore'
+import { useSaveStore } from '@/stores/saveStore'
 import CatZone from '@/components/CatZone.vue'
 import PhraseInteraction from '@/components/PhraseInteraction.vue'
 import DietPlanner from '@/components/DietPlanner.vue'
@@ -71,8 +72,16 @@ import { useGameLoop } from '@/composables/useGameLoop'
 
 const modalStore = useModalStore()
 const catStore = useCatStore()
+const saveStore = useSaveStore()
 const logVisible = ref(false)
 const { handleTitleClick } = useGameLoop()
+
+onMounted(() => {
+  if (saveStore.hasSave()) {
+    saveStore.showStatus('loaded')
+    saveStore.showToast('📂 Игра загружена!', 'info')
+  }
+})
 
 const bgStyle = computed(() => {
   if (catStore.mood === 'sad') {
